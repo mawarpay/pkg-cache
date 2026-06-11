@@ -1,4 +1,4 @@
-module github.com/writdev-alt/apiservice-cache
+module github.com/writdev-alt/pkg-cache
 
 go 1.26.0
 

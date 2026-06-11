@@ -10,7 +10,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const tracerName = "github.com/writdev-alt/apiservice-cache"
+const tracerName = "github.com/writdev-alt/pkg-cache"
 
 func startSpan(ctx context.Context, operation, key string, attrs ...attribute.KeyValue) (context.Context, trace.Span) {
 	base := []attribute.KeyValue{
