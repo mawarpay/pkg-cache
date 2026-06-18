@@ -13,6 +13,7 @@ Shared Redis cache-aside library for IlonaPay microservices. Built on `github.co
 - OpenTelemetry spans on GET/SET/DEL/MGET/PIPELINE and DB fallback
 - Health check helper
 - Graceful shutdown via `Close()`
+- Auth session validation (`HasUserSession`, `HasAdminSession`) against auth-service Redis keys
 
 ## Quick Start
 
