@@ -34,11 +34,11 @@ func HasSession(ctx context.Context, modelType, modelID, deviceID, ip string) (b
 	}
 
 	key := authSessionKey(modelType, modelID, deviceID, ip)
-	exists, err := pkgredis.GetUniversalClient().Exists(ctx, key).Result()
+	raw, err := pkgredis.Get(ctx, key)
 	if err != nil {
 		return false, err
 	}
-	return exists > 0, nil
+	return raw != "", nil
 }
 
 // HasUserSession checks portal session validity in Redis (auth-service session store).

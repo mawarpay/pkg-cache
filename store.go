@@ -8,7 +8,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/redis/go-redis/v9"
+	pkgredis "github.com/turahe/pkg/redis"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -132,17 +132,17 @@ func (s *Store) getJSON(ctx context.Context, key string, dest any, entity string
 	defer span.End()
 
 	start := time.Now()
-	raw, err := Client().Get(ctx, key).Result()
+	raw, err := pkgredis.Get(ctx, key)
 	observeLatency(s.service, "GET", start)
 
-	if err == redis.Nil {
-		setHit(span, false)
-		return false, nil
-	}
 	if err != nil {
 		incRedisError(s.service, "GET")
 		recordError(span, err)
 		return false, err
+	}
+	if raw == "" {
+		setHit(span, false)
+		return false, nil
 	}
 
 	if raw == notFoundMarker {
@@ -175,7 +175,7 @@ func (s *Store) setJSON(ctx context.Context, key string, val any, category TTLCa
 	}
 
 	start := time.Now()
-	err = Client().Set(ctx, key, raw, ttl).Err()
+	err = pkgredis.Set(ctx, key, raw, ttl)
 	observeLatency(s.service, "SET", start)
 	if err != nil {
 		incRedisError(s.service, "SET")
@@ -194,7 +194,7 @@ func (s *Store) setNotFound(ctx context.Context, key, entity string) error {
 	setTTL(span, ttl.Seconds())
 
 	start := time.Now()
-	err := Client().Set(ctx, key, notFoundMarker, ttl).Err()
+	err := pkgredis.Set(ctx, key, notFoundMarker, ttl)
 	observeLatency(s.service, "SET", start)
 	if err != nil {
 		incRedisError(s.service, "SET")
@@ -229,7 +229,7 @@ func (s *Store) setJSONWithDuration(ctx context.Context, key string, val any, tt
 	}
 
 	start := time.Now()
-	err = Client().Set(ctx, key, raw, ttl).Err()
+	err = pkgredis.Set(ctx, key, raw, ttl)
 	observeLatency(s.service, "SET", start)
 	if err != nil {
 		incRedisError(s.service, "SET")
@@ -257,7 +257,7 @@ func (s *Store) Del(ctx context.Context, keys ...string) error {
 	defer span.End()
 
 	start := time.Now()
-	err := Client().Del(ctx, keys...).Err()
+	err := delKeys(ctx, keys...)
 	observeLatency(s.service, "DEL", start)
 	if err != nil {
 		incRedisError(s.service, "DEL")
@@ -276,12 +276,8 @@ func (s *Store) InvalidatePrefix(ctx context.Context, prefix string) error {
 	ctx, span := startSpan(ctx, "DEL", prefix+"*")
 	defer span.End()
 
-	iter := Client().Scan(ctx, 0, prefix+"*", 100).Iterator()
-	keys := make([]string, 0, 16)
-	for iter.Next(ctx) {
-		keys = append(keys, iter.Val())
-	}
-	if err := iter.Err(); err != nil {
+	keys, err := pkgredis.ScanKeys(ctx, prefix+"*", 100)
+	if err != nil {
 		incRedisError(s.service, "SCAN")
 		recordError(span, err)
 		return err
@@ -291,7 +287,7 @@ func (s *Store) InvalidatePrefix(ctx context.Context, prefix string) error {
 	}
 
 	start := time.Now()
-	err := Client().Del(ctx, keys...).Err()
+	err = delKeys(ctx, keys...)
 	observeLatency(s.service, "DEL", start)
 	if err != nil {
 		incRedisError(s.service, "DEL")
@@ -311,7 +307,7 @@ func (s *Store) MGetJSON(ctx context.Context, keys []string, decode func(key, ra
 	defer span.End()
 
 	start := time.Now()
-	vals, err := Client().MGet(ctx, keys...).Result()
+	vals, err := pkgredis.MGet(ctx, keys...)
 	observeLatency(s.service, "MGET", start)
 	if err != nil {
 		incRedisError(s.service, "MGET")
@@ -319,13 +315,12 @@ func (s *Store) MGetJSON(ctx context.Context, keys []string, decode func(key, ra
 		return err
 	}
 
-	for i, v := range vals {
-		if v == nil {
+	for i, raw := range vals {
+		if raw == "" {
 			incMiss(s.service, s.entity)
 			continue
 		}
-		raw, ok := v.(string)
-		if !ok || raw == notFoundMarker {
+		if raw == notFoundMarker {
 			incHit(s.service, s.entity)
 			continue
 		}
@@ -348,18 +343,18 @@ func (s *Store) MSetJSON(ctx context.Context, entries map[string]any, category T
 	ttl := jitterTTL(s.cfg.TTL.For(category))
 	setTTL(span, ttl.Seconds())
 
-	pipe := Client().Pipeline()
+	pairs := make(map[string]interface{}, len(entries))
 	for key, val := range entries {
 		raw, err := json.Marshal(val)
 		if err != nil {
 			recordError(span, err)
 			return err
 		}
-		pipe.Set(ctx, key, raw, ttl)
+		pairs[key] = raw
 	}
 
 	start := time.Now()
-	_, err := pipe.Exec(ctx)
+	err := pkgredis.PipelineSet(ctx, pairs, ttl)
 	observeLatency(s.service, "PIPELINE", start)
 	if err != nil {
 		incRedisError(s.service, "PIPELINE")

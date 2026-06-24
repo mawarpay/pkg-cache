@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v5"
-	"github.com/redis/go-redis/v9"
 	"github.com/turahe/pkg/config"
 	pkgredis "github.com/turahe/pkg/redis"
 )
@@ -16,12 +15,14 @@ func Enabled() bool {
 	return config.GetConfig().Redis.Enabled && pkgredis.IsAlive()
 }
 
-// Setup initializes Redis via turahe/pkg with exponential backoff retry.
+// Setup initializes Redis via turahe/pkg/redis with exponential backoff retry.
 // Returns nil when Redis is disabled; returns error only when enabled and all retries fail.
 func Setup(ctx context.Context, cfg Config) error {
 	if !config.GetConfig().Redis.Enabled {
 		return nil
 	}
+
+	applyPoolConfig(cfg)
 
 	bo := backoff.NewExponentialBackOff()
 	bo.InitialInterval = 200 * time.Millisecond
@@ -39,9 +40,11 @@ func Setup(ctx context.Context, cfg Config) error {
 	return err
 }
 
-// Client returns the underlying Redis client.
-func Client() redis.Cmdable {
-	return pkgredis.GetUniversalClient()
+func applyPoolConfig(cfg Config) {
+	if cfg.PoolSize <= 0 {
+		return
+	}
+	config.GetConfig().Redis.PoolSize = cfg.PoolSize
 }
 
 // Ping checks Redis connectivity for health endpoints.
@@ -50,7 +53,7 @@ func Ping(ctx context.Context) error {
 		return fmt.Errorf("redis disabled or unavailable")
 	}
 	start := time.Now()
-	err := Client().Ping(ctx).Err()
+	err := pkgredis.GetUniversalClient().Ping(ctx).Err()
 	observeLatency("global", "ping", start)
 	if err != nil {
 		incRedisError("global", "ping")
@@ -64,4 +67,14 @@ func Close() error {
 		return nil
 	}
 	return pkgredis.Close()
+}
+
+func delKeys(ctx context.Context, keys ...string) error {
+	if len(keys) == 0 {
+		return nil
+	}
+	if len(keys) == 1 {
+		return pkgredis.Delete(ctx, keys[0])
+	}
+	return pkgredis.GetUniversalClient().Del(ctx, keys...).Err()
 }
