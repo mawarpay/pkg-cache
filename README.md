@@ -1,4 +1,4 @@
-# github.com/writdev-alt/pkg-cache
+# github.com/mawarpay/pkg-cache
 
 Shared Redis cache-aside library for IlonaPay microservices. Built on `github.com/turahe/pkg/redis`.
 
@@ -18,7 +18,7 @@ Shared Redis cache-aside library for IlonaPay microservices. Built on `github.co
 ## Quick Start
 
 ```go
-import pkgcache "github.com/writdev-alt/pkg-cache"
+import pkgcache "github.com/mawarpay/pkg-cache"
 
 cfg := pkgcache.LoadConfig()
 _ = pkgcache.Setup(ctx, cfg)
