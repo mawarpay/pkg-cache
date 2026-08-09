@@ -1,19 +1,42 @@
 # github.com/mawarpay/pkg-cache
 
-Shared Redis cache-aside library for IlonaPay microservices. Built on `github.com/turahe/pkg/redis`.
+Shared Redis cache-aside library for IlonaPay microservices. It provides
+namespaced key helpers, cache-aside patterns, negative caching and TTL
+management, instrumentation (Prometheus + OpenTelemetry), and small
+convenience helpers for service health and session validation.
+
+## Goals
+
+- Provide a lightweight, well-instrumented Redis-backed cache-aside library
+  usable across IlonaPay microservices.
+- Offer safe production defaults: negative caching for not-found results,
+  TTL jitter to reduce avalanches, singleflight to deduplicate concurrent
+  loads, and optional distributed locking for stampede prevention.
+- Expose Prometheus metrics and OpenTelemetry spans so services can observe
+  cache behaviour with minimal setup.
+- Keep the public API small and testable; avoid embedding business logic.
+
+### Stack
+- **Language(s):** Go (100%)
+- **Framework / runtime:** Go modules (go.mod)
+- **Notable libraries:**
+  - github.com/turahe/pkg/redis - shared Redis client/adapter used by the package
+  - github.com/prometheus/client_golang - Prometheus metrics
+  - go.opentelemetry.io/otel - OpenTelemetry tracing helpers
+  - github.com/cenkalti/backoff/v5 - retry/backoff used for Redis setup
+  - golang.org/x/sync/singleflight - request coalescing for load deduplication
 
 ## Features
 
-- Cache-aside (`LoadJSON`) with hit/miss metrics
+- Cache-aside (`LoadJSON`) with hit/miss Prometheus metrics
 - Singleflight request coalescing + Redis distributed lock (stampede prevention)
-- Negative caching (`__NOT_FOUND__`, 60s default)
+- Negative caching (`__NOT_FOUND__`, configurable TTL)
 - TTL jitter 10–20% (avalanche prevention)
 - Batch `MGetJSON` / `MSetJSON` via pipeline
 - Prometheus metrics (`ilonapay_cache_*`)
 - OpenTelemetry spans on GET/SET/DEL/MGET/PIPELINE and DB fallback
-- Health check helper
-- Graceful shutdown via `Close()`
-- Auth session validation (`HasUserSession`, `HasAdminSession`) against auth-service Redis keys
+- Health check helper and Ping/Close helpers for graceful shutdown
+- Auth session validation helpers (`HasUserSession`, `HasAdminSession`) against auth-service Redis keys
 
 ## Quick Start
 
@@ -31,8 +54,40 @@ _ = store.LoadJSON(ctx, pkgcache.Key("wallet", "uuid", id), pkgcache.TTLUserProf
 })
 ```
 
+## How it's organized
+
+```
+.go files at repo root/    library sources and helpers (keys, config, store, metrics, trace)
+README.md                 project README and quick start
+doc.go                    package-level documentation for pkg.go.dev
+config.go                 TTL and environment-driven configuration
+client.go                 Redis lifecycle helpers (Setup, Ping, Close)
+store.go                  Store type: cache-aside operations and batch helpers
+metrics.go                Prometheus metric definitions and increments
+trace.go                  OpenTelemetry span helpers (internal)
+session.go                auth-service session validation helpers
+apikey.go, ipwl.go        key builders for specific domains (API keys, IP whitelist)
+middleware.go             Gin helper to register /metrics endpoint
+store_test.go, *_test.go  unit tests and benchmarks
+```
+
+**How it fits together:** Services call `NewStore(service, cfg)` to get a
+Store scoped to a service namespace. Consumers use `LoadJSON` to perform
+cache-aside reads that will return cached JSON or call a provided loader
+function to fetch from the backing store and populate Redis. Instrumentation
+and health helpers are provided at the package level so services can expose
+metrics and health endpoints with minimal glue code.
+
 ## Documentation
 
 - [Architecture](../../docs/redis-caching/architecture.md)
 - [Migration Guide](../../docs/redis-caching/migration-guide.md)
 - [Performance Report](../../docs/redis-caching/performance-report.md)
+
+## Contributing / Running tests
+
+- Format: `gofmt -w .`
+- Vet: `go vet ./...`
+- Tests: `go test ./...`
+
+
