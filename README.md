@@ -78,12 +78,6 @@ function to fetch from the backing store and populate Redis. Instrumentation
 and health helpers are provided at the package level so services can expose
 metrics and health endpoints with minimal glue code.
 
-## Documentation
-
-- [Architecture](../../docs/redis-caching/architecture.md)
-- [Migration Guide](../../docs/redis-caching/migration-guide.md)
-- [Performance Report](../../docs/redis-caching/performance-report.md)
-
 ## Contributing / Running tests
 
 - Format: `gofmt -w .`
