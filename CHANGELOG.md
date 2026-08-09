@@ -2,7 +2,7 @@
 
 All notable changes to this repository will be documented in this file.
 
-## [Unreleased]
+## [0.2.1] - 2026-08-09
 
 ### Added
 - `doc.go` — package-level documentation to improve pkg.go.dev presentation.
