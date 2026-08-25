@@ -2,6 +2,26 @@
 
 All notable changes to this repository will be documented in this file.
 
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and follows semantic versioning.
+
+## [Unreleased]
+
+### Added
+- `.golangci.yml` — golangci-lint v2 config (staticcheck disabled for Go 1.26 compatibility).
+- `Makefile` — local targets for fmt, vet, test (with race + coverage), bench, CI-style `check`, and `lint` / `docker-lint` via `golangci/golangci-lint` Docker image.
+- `Dockerfile` — Go 1.26 test runner image.
+- `docker-compose.yml` — Redis service plus `test` service that runs `go test ./... -race`.
+- `docker-compose.dev.yml` — optional host port publishing for Redis (`:6379`).
+- `.dockerignore` and `.gitignore` — keep Docker build context and local artifacts out of version control.
+
+### Changed
+- `README.md` — document `make test`, `make check`, and `make docker-*` workflows.
+- `trace.go` — align OpenTelemetry `tracerName` with module path `github.com/mawarpay/pkg-cache`.
+
+### Notes
+- No public API or business-logic changes.
+- Unit tests remain Redis-free; Docker Compose starts Redis for a consistent CI-like test environment.
+
 ## [0.2.1] - 2026-08-09
 
 ### Added

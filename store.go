@@ -17,19 +17,22 @@ type Store struct {
 	service string
 	entity  string
 	cfg     Config
-	group   singleflight.Group
+	group   *singleflight.Group
 }
 
 // NewStore creates a cache store scoped to service and default entity label for metrics.
 func NewStore(service string, cfg Config) *Store {
-	return &Store{service: service, entity: "default", cfg: cfg}
+	return &Store{service: service, entity: "default", cfg: cfg, group: &singleflight.Group{}}
 }
 
 // WithEntity returns a copy scoped to a specific entity for metrics labeling.
 func (s *Store) WithEntity(entity string) *Store {
-	cp := *s
-	cp.entity = entity
-	return &cp
+	return &Store{
+		service: s.service,
+		entity:  entity,
+		cfg:     s.cfg,
+		group:   s.group,
+	}
 }
 
 // LoadJSON implements cache-aside with singleflight, negative caching, and TTL jitter.
@@ -97,7 +100,7 @@ func (s *Store) LoadJSON(ctx context.Context, key string, category TTLCategory, 
 }
 
 func (s *Store) loadDirect(ctx context.Context, key string, dest any, load func() (any, error)) error {
-	ctx, span := startSpan(ctx, "db.query", key)
+	_, span := startSpan(ctx, "db.query", key)
 	defer span.End()
 	setSource(span, "database")
 
@@ -117,7 +120,7 @@ func (s *Store) loadDirect(ctx context.Context, key string, dest any, load func(
 }
 
 func (s *Store) loadWithTrace(ctx context.Context, key string, load func() (any, error)) (any, error) {
-	ctx, span := startSpan(ctx, "db.query", key)
+	_, span := startSpan(ctx, "db.query", key)
 	defer span.End()
 	setSource(span, "database")
 	setHit(span, false)

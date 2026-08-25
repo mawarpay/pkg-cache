@@ -1,0 +1,8 @@
+coverage.out
+graphify-out/
+.cursor/
+*.swp
+.idea/
+.vscode/
+.env
+.env.*

@@ -1,0 +1,13 @@
+.git
+.cursor
+.github
+*.md
+!README.md
+LICENSE
+CONTRIBUTING.md
+.idea
+.vscode
+*.swp
+*.env
+.env*
+coverage.out

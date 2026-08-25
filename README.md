@@ -80,8 +80,16 @@ metrics and health endpoints with minimal glue code.
 
 ## Contributing / Running tests
 
-- Format: `gofmt -w .`
-- Vet: `go vet ./...`
-- Tests: `go test ./...`
+```bash
+make help          # list targets
+make check         # fmt-check + vet + build + unit tests
+make lint          # golangci-lint in Docker (v2.13.0)
+make test          # go test ./... -race with coverage
+make docker-up     # start Redis (:6379)
+make docker-test   # build image and run go test ./... against Compose Redis
+make docker-down   # stop Compose services
+```
+
+Without Make: `gofmt -w .`, `go vet ./...`, `go test ./...`.
 
 

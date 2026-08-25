@@ -2,7 +2,6 @@ package cache
 
 import (
 	"context"
-	"strconv"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -10,7 +9,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const tracerName = "github.com/writdev-alt/pkg-cache"
+const tracerName = "github.com/mawarpay/pkg-cache"
 
 func startSpan(ctx context.Context, operation, key string, attrs ...attribute.KeyValue) (context.Context, trace.Span) {
 	base := []attribute.KeyValue{
@@ -38,8 +37,4 @@ func recordError(span trace.Span, err error) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 	}
-}
-
-func ttlAttr(seconds float64) attribute.KeyValue {
-	return attribute.String("cache.ttl", strconv.FormatFloat(seconds, 'f', -1, 64))
 }

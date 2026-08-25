@@ -1,0 +1,8 @@
+version: "2"
+
+linters:
+  # staticcheck 0.8.0-rc.1 (bundled in golangci-lint v2.13.0) panics on
+  # recover() in github.com/getsentry/sentry-go under Go 1.26:
+  # honnef.co/go-tools#1725 — internal error: unhandled builtin recover
+  disable:
+    - staticcheck

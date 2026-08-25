@@ -1,0 +1,6 @@
+# Optional host port publishing for local development.
+# Used by: make docker-up
+services:
+  redis:
+    ports:
+      - "6379:6379"
